@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AQUA TYCOON</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --deep:#020b18;--panel:rgba(4,28,52,0.93);--border:rgba(0,200,255,0.2);
+  --accent:#00c8ff;--accent2:#00ff9d;--accent3:#ff6b35;--gold:#ffd700;
+  --text:#b8e8ff;--dim:rgba(0,200,255,0.5);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--deep);font-family:'Exo 2',sans-serif;color:var(--text)}
+#canvas-bg{position:fixed;inset:0;z-index:0}
+#game{position:fixed;inset:0;z-index:1;display:grid;grid-template-rows:52px 1fr 148px;grid-template-columns:200px 1fr 224px;gap:5px;padding:5px}
+#topbar{grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:0 10px;overflow:hidden;backdrop-filter:blur(10px)}
+#logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:1rem;color:var(--accent);text-shadow:0 0 14px rgba(0,200,255,.7);letter-spacing:3px;white-space:nowrap;flex-shrink:0;margin-right:4px}
+.sblock{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(0,200,255,.05);border:1px solid var(--border);border-radius:5px;flex-shrink:0}
+.sval{font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;color:var(--gold);white-space:nowrap}
+.slbl{font-size:.52rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+#rep-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;border:1px solid;flex-shrink:0;font-family:'Orbitron',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:1px;transition:all .4s;white-space:nowrap}
+#speed-btns{margin-left:auto;display:flex;gap:4px;flex-shrink:0}
+.speed-btn{padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--dim);font-family:'Orbitron',sans-serif;font-size:.6rem;cursor:pointer;transition:all .2s}
+.speed-btn.active,.speed-btn:hover{background:rgba(0,200,255,.15);color:var(--accent);border-color:var(--accent)}
+#save-btns{display:flex;gap:4px;flex-shrink:0}
+.hdr-btn{padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--dim);font-family:'Orbitron',sans-serif;font-size:.58rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.hdr-btn:hover{background:rgba(0,200,255,.12);color:var(--accent);border-color:var(--accent)}
+.hdr-btn.danger:hover{background:rgba(255,107,53,.15);color:#ff6b35;border-color:#ff6b35}
+.hdr-btn.rebirth-h{border-color:rgba(255,215,0,.4);color:#ffd700}
+.hdr-btn.rebirth-h:hover{background:rgba(255,215,0,.15);border-color:#ffd700}
+#rebirth-count{font-family:'Orbitron',sans-serif;font-size:.62rem;color:#ffd700;padding:3px 8px;border:1px solid rgba(255,215,0,.3);border-radius:4px;flex-shrink:0;display:none}
+#left-panel{grid-column:1;grid-row:2;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:8px;backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden}
+#build-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+#center{grid-column:2;grid-row:2;position:relative;overflow:hidden}
+#map-wrap{position:absolute;inset:0;overflow:auto}
+#map-wrap::-webkit-scrollbar{width:5px;height:5px}
+#map-wrap::-webkit-scrollbar-thumb{background:rgba(0,200,255,.25);border-radius:3px}
+#map-container{position:relative}
+#right-panel{grid-column:3;grid-row:2;background:var(--panel);border:1px solid var(--border);border-radius:7px;backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden}
+#rtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.rtab{flex:1;padding:6px 1px;text-align:center;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:.46rem;letter-spacing:.5px;color:var(--dim);border:none;background:transparent;transition:all .2s;text-transform:uppercase}
+.rtab.active{color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-1px}
+.rtab:hover{color:var(--text)}
+.rpane{display:none;flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding:8px}
+.rpane.active{display:block}
+#bottom-bar{grid-column:1/-1;grid-row:3;display:flex;gap:5px;overflow:hidden}
+#news-ticker{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:0 12px;display:flex;align-items:center;gap:8px;overflow:hidden;backdrop-filter:blur(8px)}
+#ticker-lbl{font-family:'Orbitron',sans-serif;font-size:.52rem;color:var(--accent);letter-spacing:2px;flex-shrink:0}
+#ticker-txt{font-size:.72rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#event-log{width:240px;flex-shrink:0;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:8px;backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden}
+#log-entries{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+.ptitle{font-family:'Orbitron',sans-serif;font-size:.58rem;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--border);flex-shrink:0}
+.bitem{display:flex;align-items:center;gap:6px;padding:6px;border-radius:5px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;transition:all .15s}
+.bitem:hover{background:rgba(0,200,255,.08);border-color:var(--border)}
+.bitem.sel{background:rgba(0,200,255,.15);border-color:var(--accent)}
+.bitem.lck{opacity:.35;cursor:not-allowed}
+.bicon{width:30px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.bname{font-size:.72rem;font-weight:600;color:#fff}
+.bcost{font-size:.61rem;color:var(--gold)}
+.binc{font-size:.58rem;color:var(--accent2)}
+.mcell{position:absolute;border:1px solid rgba(0,200,255,.12);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;user-select:none;overflow:hidden;transition:border-color .12s,background .12s}
+.mcell.empty{background:rgba(0,50,80,.3)}
+.mcell.wtr{background:rgba(0,100,180,.2)}
+.mcell.locked-parcel{background:rgba(0,0,0,.55);border:1px dashed rgba(0,200,255,.18);cursor:pointer}
+.mcell.locked-parcel:hover{background:rgba(0,200,255,.09) !important;border-color:rgba(0,200,255,.4) !important}
+.mcell:not(.locked-parcel):hover{border-color:var(--accent) !important;background:rgba(0,200,255,.18) !important;z-index:5}
+.plbl{font-family:'Orbitron',sans-serif;font-size:.42rem;color:rgba(0,200,255,.45);text-align:center;line-height:1.4;pointer-events:none;padding:2px}
+.mstat{display:flex;justify-content:space-between;padding:3px 0;font-size:.68rem;border-bottom:1px solid rgba(0,200,255,.06)}
+.mstat:last-child{border:none}
+.ml{color:var(--dim)}.mv{color:#fff;font-weight:600}
+.pbar{height:3px;background:rgba(0,200,255,.1);border-radius:2px;margin:5px 0;overflow:hidden}
+.pfill{height:100%;border-radius:2px}
+.ritem{padding:6px;border-radius:5px;margin-bottom:5px;border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.ritem:hover{background:rgba(0,255,157,.07);border-color:var(--accent2)}
+.ritem.done{opacity:.45;cursor:default}
+.ritem.done:hover{background:none}
+.rname{font-size:.71rem;font-weight:600;color:var(--accent2)}
+.rdesc{font-size:.61rem;color:var(--dim);margin-top:1px}
+.rcost{font-size:.62rem;color:var(--gold);margin-top:3px}
+.logrow{font-size:.66rem;padding:2px 0;border-bottom:1px solid rgba(0,200,255,.06);color:#7ab8d4;line-height:1.4}
+.logrow.good{color:var(--accent2)}.logrow.bad{color:var(--accent3)}.logrow.gold{color:var(--gold)}
+.ipop{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:700;color:var(--gold);pointer-events:none;z-index:20;white-space:nowrap;animation:ipop .9s ease-out forwards}
+@keyframes ipop{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-26px)}}
+#tt{position:fixed;background:rgba(2,15,30,.97);border:1px solid var(--accent);border-radius:7px;padding:8px 12px;font-size:.71rem;pointer-events:none;z-index:500;max-width:200px;display:none;box-shadow:0 0 14px rgba(0,200,255,.22)}
+#tt strong{color:#fff;display:block;margin-bottom:3px}
+#modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:800;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#modal-bg.open{display:flex}
+#modal{background:rgba(3,18,36,.98);border:1px solid var(--border);border-radius:12px;padding:26px;max-width:430px;width:92%;box-shadow:0 0 40px rgba(0,200,255,.13)}
+#modal h2{font-family:'Orbitron',sans-serif;font-size:.95rem;color:var(--accent);letter-spacing:2px;margin-bottom:11px}
+#modal p{font-size:.78rem;color:var(--text);line-height:1.65;margin-bottom:15px}
+#modal .mbtns{display:flex;gap:8px;justify-content:flex-end}
+.mbtn{padding:7px 16px;border-radius:6px;font-family:'Orbitron',sans-serif;font-size:.6rem;letter-spacing:1px;cursor:pointer;transition:all .2s;border:1px solid}
+.mbtn.cancel{background:transparent;border-color:var(--border);color:var(--dim)}
+.mbtn.cancel:hover{border-color:var(--accent);color:var(--accent)}
+.mbtn.confirm{background:rgba(255,107,53,.15);border-color:#ff6b35;color:#ff6b35}
+.mbtn.confirm:hover{background:rgba(255,107,53,.3)}
+.mbtn.rebirth-btn{background:rgba(255,215,0,.1);border-color:#ffd700;color:#ffd700}
+.mbtn.rebirth-btn:hover{background:rgba(255,215,0,.25)}
+.rep-row{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;margin-bottom:5px;font-size:.67rem;border:1px solid transparent}
+.rep-row.cur{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.05)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(0,200,255,.2);border-radius:2px}
+</style>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+<div id="game">
+  <div id="topbar">
+    <div id="logo">💧 AQUA</div>
+    <div class="sblock"><span>💰</span><div><div class="sval" id="s-money">$1,000</div><div class="slbl">Cash</div></div></div>
+    <div class="sblock"><span>📈</span><div><div class="sval" id="s-income">+$0/s</div><div class="slbl">Income</div></div></div>
+    <div class="sblock"><span>👥</span><div><div class="sval" id="s-cust">0</div><div class="slbl">Customers</div></div></div>
+    <div class="sblock"><span>🔬</span><div><div class="sval" id="s-tech">0</div><div class="slbl">Tech</div></div></div>
+    <div id="rep-badge">🌱 LOCAL</div>
+    <div id="rebirth-count"></div>
+    <div id="speed-btns">
+      <button class="speed-btn active" onclick="setSpeed(1)" id="spd1">▶1x</button>
+      <button class="speed-btn" onclick="setSpeed(2)" id="spd2">▶▶2x</button>
+      <button class="speed-btn" onclick="setSpeed(4)" id="spd3">▶▶▶4x</button>
+    </div>
+    <div id="save-btns">
+      <button class="hdr-btn" onclick="saveGame()">💾 Save</button>
+      <button class="hdr-btn danger" onclick="confirmReset()">🗑 Reset</button>
+      <button class="hdr-btn rebirth-h" onclick="confirmRebirth()" id="rebirth-btn" style="display:none">✨ Rebirth</button>
+    </div>
+  </div>
+  <div id="left-panel">
+    <div class="ptitle">🏗 Build</div>
+    <div id="build-scroll"><div id="build-list"></div></div>
+  </div>
+  <div id="center"><div id="map-wrap"><div id="map-container"></div></div></div>
+  <div id="right-panel">
+    <div id="rtabs">
+      <button class="rtab active" onclick="switchTab('stats')">Stats</button>
+      <button class="rtab" onclick="switchTab('rep')">Rep</button>
+      <button class="rtab" onclick="switchTab('research')">Lab</button>
+      <button class="rtab" onclick="switchTab('contracts')">Deals</button>
+      <button class="rtab" onclick="switchTab('milestones')">Goals</button>
+    </div>
+    <div id="pane-stats"      class="rpane active"><div id="empire-stats"></div></div>
+    <div id="pane-rep"        class="rpane"><div id="rep-pane"></div></div>
+    <div id="pane-research"   class="rpane"><div id="research-list"></div></div>
+    <div id="pane-contracts"  class="rpane"><div id="contracts-list"></div></div>
+    <div id="pane-milestones" class="rpane"><div id="milestones-list"></div></div>
+  </div>
+  <div id="bottom-bar">
+    <div id="news-ticker"><span id="ticker-lbl">◈ MARKET</span><span id="ticker-txt">Welcome to Aqua Tycoon — build your water empire!</span></div>
+    <div id="event-log"><div class="ptitle">📋 Log</div><div id="log-entries"></div></div>
+  </div>
+</div>
+<div id="tt"></div>
+<div id="modal-bg">
+  <div id="modal">
+    <h2 id="modal-title"></h2>
+    <p id="modal-body"></p>
+    <div class="mbtns">
+      <button class="mbtn cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn confirm" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+<script>
+// ═══════════════ WEBGL ═══════════════
+const canvas=document.getElementById('canvas-bg');
+const gl=canvas.getContext('webgl')||canvas.getContext('experimental-webgl');
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+if(gl){
+  const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+  const fs=`precision highp float;uniform float t;uniform vec2 res;
+  float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
+  float sn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(n(i),n(i+vec2(1,0)),f.x),mix(n(i+vec2(0,1)),n(i+vec2(1,1)),f.x),f.y);}
+  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*sn(p);p*=2.1;a*=.5;}return v;}
+  void main(){vec2 uv=gl_FragCoord.xy/res;float T=t*.18;
+    vec2 q=vec2(fbm(uv),fbm(uv+vec2(5.2,1.3)));
+    vec2 r=vec2(fbm(uv+4.*q+vec2(1.7+T*.3,9.2)),fbm(uv+4.*q+vec2(8.3+T*.25,2.8)));
+    float f=clamp(fbm(uv+4.*r+vec2(T*.1))+sin(uv.x*12.+uv.y*6.+T*2.5)*.03,0.,1.);
+    vec3 col=mix(vec3(.01,.04,.09),vec3(.02,.09,.18),f);col=mix(col,vec3(0.,.4,.7),f*f*.5);col+=vec3(0.,.7,.9)*max(0.,f-.7)*.4;
+    float c=sin(uv.x*40.+T*3.)*sin(uv.y*40.+T*2.5);col+=vec3(0.,.3,.5)*max(0.,c*c*.08)*f;
+    col*=.7+.3*(1.-2.*length(uv-.5));gl_FragColor=vec4(col,1);}`;
+  function mkS(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+  const prog=gl.createProgram();gl.attachShader(prog,mkS(gl.VERTEX_SHADER,vs));gl.attachShader(prog,mkS(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);gl.useProgram(prog);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+  const pp=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(pp);gl.vertexAttribPointer(pp,2,gl.FLOAT,false,0,0);
+  const ut=gl.getUniformLocation(prog,'t'),ur=gl.getUniformLocation(prog,'res');
+  const t0=performance.now();let glLast=0;
+  (function loop(now){requestAnimationFrame(loop);if(now-glLast<34)return;glLast=now;gl.uniform1f(ut,(now-t0)/1e3);gl.uniform2f(ur,canvas.width,canvas.height);gl.drawArrays(gl.TRIANGLES,0,6);})(0);
+}
+
+// ═══════════════ CONSTANTS ═══════════════
+const CS=66; // cell size
+const MAP_ROWS=14, MAP_COLS=20;
+
+// ── PARCELS ──
+const PARCELS=[
+  {id:'p0',name:'Home Territory', cost:0,      desc:'Your starting ground.'},
+  {id:'p1',name:'River Delta',    cost:2000,   desc:'Fertile delta — 12 water tiles for pumps & desal.'},
+  {id:'p2',name:'Industrial Zone',cost:5000,   desc:'Flat land perfect for filter plants and towers.'},
+  {id:'p3',name:'Coastal Strip',  cost:12000,  desc:'Coastline with ocean access — 9 water tiles.'},
+  {id:'p4',name:'Mountain Valley',cost:30000,  desc:'Remote valley with a hidden river — 6 water tiles.'},
+  {id:'p5',name:'Desert Flats',   cost:60000,  desc:'Vast expanse — enormous open capacity.'},
+  {id:'p6',name:'Arctic Reserve', cost:150000, desc:'Pristine glacial territory — 4 massive water tiles.'},
+];
+
+// ── MAP LAYOUT ──
+function buildMap(){
+  const m=[];
+  for(let r=0;r<MAP_ROWS;r++){m[r]=[];for(let c=0;c<MAP_COLS;c++)m[r][c]={parcel:'p0',water:false};}
+  // starter p0: rows 0-5, cols 0-8
+  for(let r=0;r<=5;r++) for(let c=0;c<=8;c++) m[r][c]={parcel:'p0',water:false};
+  [[1,2],[1,3],[2,1],[2,2],[2,3],[2,4],[3,2],[3,3],[3,4],[3,5],[4,3],[4,4]].forEach(([r,c])=>m[r][c].water=true);
+  // p1: River Delta, rows 1-6, cols 9-14
+  for(let r=1;r<=6;r++) for(let c=9;c<=14;c++) m[r][c]={parcel:'p1',water:false};
+  [[1,10],[1,11],[2,9],[2,10],[2,11],[3,10],[3,11],[3,12],[4,11],[4,12],[5,10],[5,11]].forEach(([r,c])=>m[r][c].water=true);
+  // p2: Industrial, rows 7-10, cols 0-8
+  for(let r=7;r<=10;r++) for(let c=0;c<=8;c++) m[r][c]={parcel:'p2',water:false};
+  // p3: Coastal, rows 0-7, cols 15-19
+  for(let r=0;r<=7;r++) for(let c=15;c<=19;c++) m[r][c]={parcel:'p3',water:false};
+  [[0,15],[0,16],[1,15],[1,16],[1,17],[2,16],[2,17],[3,17],[3,18]].forEach(([r,c])=>m[r][c].water=true);
+  // p4: Mountain Valley, rows 7-10, cols 9-19
+  for(let r=7;r<=10;r++) for(let c=9;c<=19;c++) m[r][c]={parcel:'p4',water:false};
+  [[8,12],[8,13],[9,11],[9,12],[9,13],[10,12]].forEach(([r,c])=>m[r][c].water=true);
+  // p5: Desert, rows 11-12, all cols
+  for(let r=11;r<=12;r++) for(let c=0;c<=19;c++) m[r][c]={parcel:'p5',water:false};
+  [[11,5],[11,6],[12,5],[12,6],[11,14],[11,15],[12,14]].forEach(([r,c])=>m[r][c].water=true);
+  // p6: Arctic, row 13, all cols
+  for(let c=0;c<=19;c++) m[13][c]={parcel:'p6',water:false};
+  [[13,8],[13,9],[13,10],[13,11]].forEach(([r,c])=>m[r][c].water=true);
+  return m;
+}
+const MAPLAYOUT=buildMap();
+
+// ── BUILDINGS ──
+const BUILDINGS=[
+  {id:'well',   name:'Water Well',       icon:'⛽',color:'#1e4a6b',cost:100,  upg:80,   inc:2,   cust:5,   tech:0, maint:.1, desc:'Cheap starter source.',        unlocked:true, max:5,rep:0, water:false},
+  {id:'pump',   name:'Pump Station',     icon:'🔧',color:'#1a5c5c',cost:350,  upg:200,  inc:8,   cust:20,  tech:0, maint:.4, desc:'Industrial pump. Water tile.', unlocked:true, max:5,rep:1, water:true},
+  {id:'filter', name:'Filter Plant',     icon:'🧪',color:'#1e3d5c',cost:800,  upg:500,  inc:20,  cust:50,  tech:1, maint:1,  desc:'Purifies water + tech.',       unlocked:true, max:5,rep:3, water:false},
+  {id:'tower',  name:'Water Tower',      icon:'🗼',color:'#2a1e5c',cost:1500, upg:900,  inc:45,  cust:120, tech:2, maint:2,  desc:'Wide distribution.',           unlocked:false,max:5,rep:5, water:false,req:'pipes'},
+  {id:'desal',  name:'Desalination',     icon:'🌊',color:'#1a4a1a',cost:4000, upg:2000, inc:120, cust:300, tech:5, maint:8,  desc:'Ocean water. Water tile.',      unlocked:false,max:5,rep:8, water:true, req:'desal'},
+  {id:'uvplant',name:'UV Sterilizer',    icon:'☀️',color:'#1a3a5c',cost:3200, upg:1600, inc:90,  cust:220, tech:6, maint:6,  desc:'UV light purification. Water tile.',unlocked:false,max:5,rep:7, water:true, req:'uv'},
+  {id:'resort', name:'Aqua Resort',      icon:'🏖',color:'#4a2a00',cost:8000, upg:4000, inc:280, cust:600, tech:3, maint:15, desc:'Luxury resort. Big revenue.',  unlocked:false,max:3,rep:15,water:false,req:'luxury'},
+  {id:'recycle',name:'Recycling Center', icon:'♻️',color:'#2a4a00',cost:2500, upg:1200, inc:65,  cust:180, tech:8, maint:5,  desc:'Wastewater + tech.',           unlocked:false,max:5,rep:10,water:false,req:'recycle'},
+  {id:'nano',   name:'Nano Purifier',    icon:'🔮',color:'#1a3a4a',cost:35000,upg:18000,inc:850, cust:2000,tech:20,maint:50, desc:'Cutting-edge nano filtration.',unlocked:false,max:3,rep:30,water:false,req:'nano'},
+];
+
+// ── RESEARCH ──
+const RESEARCH=[
+  {id:'pipes',      name:'Advanced Pipes',   cost:25,   desc:'Unlocks Water Tower'},
+  {id:'marketing',  name:'Marketing',        cost:40,   desc:'+20% customer capacity'},
+  {id:'pressure',   name:'Pressure Boost',   cost:80,   desc:'+25% income all buildings'},
+  {id:'uv',         name:'UV Sterilization', cost:120,  desc:'Unlocks UV Sterilizer'},
+  {id:'recycle',    name:'Water Recycling',  cost:200,  desc:'Unlocks Recycling Center'},
+  {id:'smart',      name:'Smart Meters',     cost:300,  desc:'-50% maintenance costs'},
+  {id:'desal',      name:'Desalination Tech',cost:500,  desc:'Unlocks Desalination Plant'},
+  {id:'luxury',     name:'Luxury Water',     cost:900,  desc:'Unlocks Aqua Resort'},
+  {id:'automation', name:'Automation',       cost:1500, desc:'+50% income all buildings'},
+  {id:'nano',       name:'Nanotechnology',   cost:3000, desc:'Unlocks Nano Purifier'},
+];
+
+// ── REPUTATION LEVELS (5 tiers, exponentially harder) ──
+// repXP accumulates; each level has a threshold that grows steeply.
+// Each level multiplies: income, customers, tech generation, contract rewards, build speed bonus.
+const REP_LEVELS=[
+  {lv:1, name:'LOCAL',    icon:'🌱', color:'#4a9a4a', bg:'rgba(74,154,74,.12)',
+   xpNeeded:0,    // starting level
+   incBonus:0,    custBonus:0,    techBonus:0,    contractBonus:0,
+   desc:'Your empire is just getting started.'},
+  {lv:2, name:'REGIONAL', icon:'🏘', color:'#4a8acc', bg:'rgba(74,138,204,.12)',
+   xpNeeded:300,
+   incBonus:.15,  custBonus:.15,  techBonus:.20,  contractBonus:.10,
+   desc:'+15% income · +15% customers · +20% tech · +10% contract rewards'},
+  {lv:3, name:'NATIONAL', icon:'🏙', color:'#8a4acc', bg:'rgba(138,74,204,.12)',
+   xpNeeded:1500,
+   incBonus:.35,  custBonus:.30,  techBonus:.50,  contractBonus:.25,
+   desc:'+35% income · +30% customers · +50% tech · +25% contracts'},
+  {lv:4, name:'GLOBAL',   icon:'🌍', color:'#cc9a00', bg:'rgba(204,154,0,.12)',
+   xpNeeded:6000,
+   incBonus:.75,  custBonus:.55,  techBonus:1.0,  contractBonus:.50,
+   desc:'+75% income · +55% customers · +100% tech · +50% contracts'},
+  {lv:5, name:'TITAN',    icon:'👑', color:'#ffd700', bg:'rgba(255,215,0,.12)',
+   xpNeeded:20000, // requires all 7 parcels + well-developed empire
+   incBonus:1.5,  custBonus:1.0,  techBonus:2.0,  contractBonus:1.0,
+   desc:'+150% income · +100% customers · +200% tech · +100% contracts'},
+];
+
+// ── MILESTONES ──
+const MILESTONES=[
+  {id:'m1', label:'💰 $10K earned',       check:()=>G.totalEarned>=10000,              reward:500},
+  {id:'m2', label:'🏗 5 buildings',        check:()=>bCount()>=5,                       reward:1000},
+  {id:'m3', label:'🗺 Buy 1st expansion',  check:()=>G.ownedParcels.size>1,             reward:2000},
+  {id:'m4', label:'👥 500 customers',      check:()=>G.customers>=500,                  reward:2000},
+  {id:'m5', label:'💰 $100K earned',       check:()=>G.totalEarned>=100000,             reward:5000},
+  {id:'m6', label:'🏘 Regional rep (Lv2)',  check:()=>G.repLevel>=2,                    reward:3000},
+  {id:'m7', label:'🔬 3 researches',       check:()=>Object.keys(G.research).length>=3, reward:2500},
+  {id:'m8', label:'🌍 Global rep (Lv4)',    check:()=>G.repLevel>=4,                    reward:10000},
+  {id:'m9', label:'💰 $1M earned',         check:()=>G.totalEarned>=1000000,            reward:20000},
+  {id:'m10',label:'🗺 Own all land',       check:()=>G.ownedParcels.size>=PARCELS.length,reward:50000},
+  {id:'m11',label:'👑 Titan rep (Lv5)',     check:()=>G.repLevel>=5,                    reward:25000},
+  {id:'m12',label:'💰 $10M earned',        check:()=>G.totalEarned>=10000000,           reward:100000},
+];
+
+// ── CONTRACTS ──
+const CONTRACTS=[
+  {id:'c1',name:'City Water Supply',  icon:'🏙',reward:2000,  dur:60,  inc:15,  req:3},
+  {id:'c2',name:'Stadium Deal',       icon:'🏟',reward:5000,  dur:90,  inc:30,  req:5},
+  {id:'c3',name:'Hospital Contract',  icon:'🏥',reward:8000,  dur:120, inc:50,  req:8},
+  {id:'c4',name:'Airport Hydration',  icon:'✈️',reward:12000, dur:150, inc:80,  req:10},
+  {id:'c5',name:'Government Reserve', icon:'🏛',reward:25000, dur:180, inc:120, req:15},
+  {id:'c6',name:'Global Water Treaty',icon:'🌍',reward:80000, dur:300, inc:350, req:25},
+];
+
+const NEWS=[
+  '📰 City officials urge expansion of clean water infrastructure',
+  '📰 Drought conditions push water prices to record highs',
+  '📰 New desalination technology promises cheaper clean water',
+  '📰 Water scarcity declared a global crisis',
+  '📰 Smart water meters reducing waste by 30% in pilot cities',
+  '📰 Ocean water recycling breakthrough announced',
+  '📰 Water rights trading market hits $50 billion valuation',
+  '📰 Local tycoon praised for clean water access programs',
+  '📰 Nano-filtration startup acquired for $2.4 billion',
+  '📰 Climate change accelerating freshwater demand globally',
+];
+
+// ═══════════════ STATE ═══════════════
+function defaultState(){
+  return{
+    money:1000,income:0,grossIncome:0,maintenance:0,
+    customers:0,reputation:0,repXP:0,repLevel:1,techPoints:0,techGen:0,
+    speed:1,selBuild:null,
+    grid:{},buildings:{},nextId:1,research:{},
+    totalEarned:0,events:[],
+    activeContracts:[],incMult:1,
+    droughtActive:false,droughtTimer:0,
+    ownedParcels:new Set(['p0']),
+    rebirths:0,rebirthBonus:0,
+    milestoneDone:{},
+  };
+}
+let G=defaultState();
+const bCount=()=>Object.keys(G.buildings).length;
+
+function syncMilestones(){MILESTONES.forEach(m=>{m.done=!!G.milestoneDone[m.id];});}
+
+// ═══════════════ MAP ═══════════════
+const mapEl=document.getElementById('map-container');
+
+function initGrid(){
+  mapEl.innerHTML='';
+  mapEl.style.width=(MAP_COLS*CS)+'px';
+  mapEl.style.height=(MAP_ROWS*CS)+'px';
+  for(let r=0;r<MAP_ROWS;r++){
+    for(let c=0;c<MAP_COLS;c++){
+      const info=MAPLAYOUT[r][c];
+      const owned=G.ownedParcels.has(info.parcel);
+      const el=document.createElement('div');
+      el.id=`c${r}_${c}`;
+      el.style.cssText=`left:${c*CS}px;top:${r*CS}px;width:${CS-2}px;height:${CS-2}px;`;
+      el.className='mcell';
+      if(!owned){
+        el.classList.add('locked-parcel');
+        const p=PARCELS.find(x=>x.id===info.parcel);
+        el.innerHTML=`<div class="plbl">🔒<br>${p?p.name:''}</div>`;
+        el.addEventListener('click',()=>promptBuy(info.parcel));
+      }else{
+        el.classList.add(info.water?'wtr':'empty');
+        if(info.water)el.innerHTML='<span style="opacity:.35">🌊</span>';
+        el.addEventListener('click',()=>cellClick(r,c));
+        el.addEventListener('mouseenter',e=>cellHover(e,r,c));
+        el.addEventListener('mouseleave',hideTT);
+      }
+      mapEl.appendChild(el);
+    }
+  }
+  Object.values(G.buildings).forEach(b=>renderCell(b.y,b.x));
+}
+
+function unlockParcelCells(pid){
+  for(let r=0;r<MAP_ROWS;r++){
+    for(let c=0;c<MAP_COLS;c++){
+      if(MAPLAYOUT[r][c].parcel!==pid)continue;
+      const info=MAPLAYOUT[r][c];
+      const old=document.getElementById(`c${r}_${c}`);
+      if(!old)continue;
+      const el=document.createElement('div');
+      el.id=`c${r}_${c}`;
+      el.style.cssText=old.style.cssText;
+      el.className='mcell '+(info.water?'wtr':'empty');
+      if(info.water)el.innerHTML='<span style="opacity:.35">🌊</span>';
+      el.addEventListener('click',()=>cellClick(r,c));
+      el.addEventListener('mouseenter',e=>cellHover(e,r,c));
+      el.addEventListener('mouseleave',hideTT);
+      old.replaceWith(el);
+    }
+  }
+}
+
+function promptBuy(pid){
+  const p=PARCELS.find(x=>x.id===pid);
+  if(!p||G.ownedParcels.has(pid))return;
+  openModal(
+    '🗺 Buy '+p.name,
+    `<b style="color:#ffd700">$${p.cost.toLocaleString()}</b><br><br>${p.desc}<br><br>You have <b style="color:#00ff9d">$${Math.floor(G.money).toLocaleString()}</b>.`,
+    ()=>{
+      if(G.money<p.cost){addLog(`Not enough money for ${p.name}!`,'bad');return;}
+      G.money-=p.cost;G.ownedParcels.add(pid);
+      unlockParcelCells(pid);
+      addLog(`🗺 Purchased ${p.name}!`,'gold');
+      checkMilestones();updateUI();renderBuildList();
+    },
+    'Buy $'+p.cost.toLocaleString(),'rebirth-btn'
+  );
+}
+
+function cellClick(r,c){
+  const key=`${r}_${c}`,bid=G.grid[key];
+  if(bid){openBPanel(bid,r,c);return;}
+  if(!G.selBuild){addLog('Select a building first!','');return;}
+  const def=BUILDINGS.find(b=>b.id===G.selBuild);
+  if(!def||!def.unlocked)return;
+  const info=MAPLAYOUT[r][c];
+  if(!G.ownedParcels.has(info.parcel)){addLog('Buy this land first!','bad');return;}
+  if(def.water&&!info.water){addLog(`${def.name} needs a water tile 🌊`,'bad');return;}
+  if(G.money<def.cost){addLog(`Need $${def.cost.toLocaleString()}`,'bad');return;}
+  G.money-=def.cost;
+  const id=G.nextId++;
+  G.grid[key]=id;G.buildings[id]={type:def.id,level:1,x:c,y:r};
+  recalc();renderCell(r,c);
+  addLog(`Built ${def.name} (+$${def.inc}/s)`,'good');
+  checkMilestones();updateUI();
+  popupCell(r,c,`-$${def.cost.toLocaleString()}`);
+}
+
+// ═══════════════ BUILDING PANEL ═══════════════
+function openBPanel(bid,r,c){
+  closeBPanel();
+  const b=G.buildings[bid],def=BUILDINGS.find(x=>x.id===b.type);
+  const upgCost=Math.floor(def.upg*Math.pow(1.5,b.level-1));
+  const sellVal=Math.floor(def.cost*.4*b.level);
+  const canUpg=b.level<def.max,mm=G.research.smart?.5:1;
+  const panel=document.createElement('div');
+  panel.id='bpanel';
+  panel.style.cssText='position:fixed;z-index:300;background:rgba(2,15,30,.97);border:1px solid rgba(0,200,255,.5);border-radius:9px;padding:14px;width:210px;box-shadow:0 0 22px rgba(0,200,255,.18);font-family:"Exo 2",sans-serif;color:#b8e8ff;font-size:.75rem;pointer-events:all;';
+  const cell=document.getElementById(`c${r}_${c}`);
+  const rect=cell.getBoundingClientRect();
+  let left=rect.right+8;if(left+215>innerWidth)left=rect.left-218;
+  panel.style.left=left+'px';panel.style.top=Math.max(8,Math.min(rect.top,innerHeight-300))+'px';
+  panel.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+      <span style="font-family:'Orbitron',sans-serif;font-size:.62rem;color:#00c8ff;letter-spacing:2px">${def.icon} ${def.name.toUpperCase()}</span>
+      <button onclick="closeBPanel()" style="background:none;border:none;color:#ff6b35;cursor:pointer;font-size:.95rem">✕</button>
+    </div>
+    <div style="padding:7px;background:rgba(0,200,255,.05);border-radius:5px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Level</span><b>${b.level}/${def.max}</b></div>
+      <div class="pbar" style="margin:4px 0"><div class="pfill" style="width:${(b.level/def.max)*100}%;background:linear-gradient(90deg,#00c8ff,#00ff9d)"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px"><span style="color:var(--dim)">Income</span><span style="color:#00ff9d">+$${(def.inc*b.level*G.incMult).toFixed(1)}/s</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:var(--dim)">Maint.</span><span style="color:#ff6b35">-$${(def.maint*b.level*mm).toFixed(2)}/s</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:var(--dim)">Customers</span><span>${def.cust*b.level}</span></div>
+    </div>
+    ${canUpg?`<button onclick="upgBuilding(${bid},${r},${c})" style="width:100%;padding:7px;margin-bottom:6px;cursor:pointer;border-radius:5px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.4);color:#00c8ff;font-family:'Orbitron',sans-serif;font-size:.6rem;letter-spacing:1px">
+      ⬆ UPGRADE TO LV${b.level+1}<br><span style="color:#ffd700;font-size:.57rem">$${upgCost.toLocaleString()} → +$${(def.inc*(b.level+1)).toFixed(1)}/s</span></button>`
+    :`<div style="padding:7px;text-align:center;color:#ffd700;font-family:'Orbitron',sans-serif;font-size:.6rem;border:1px solid rgba(255,215,0,.3);border-radius:5px;margin-bottom:6px">✦ MAX LEVEL ✦</div>`}
+    <button onclick="sellBuilding(${bid},${r},${c})" style="width:100%;padding:5px;cursor:pointer;border-radius:5px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);color:#ff6b35;font-family:'Orbitron',sans-serif;font-size:.57rem;letter-spacing:1px">🔨 DEMOLISH (+$${sellVal.toLocaleString()})</button>`;
+  document.body.appendChild(panel);
+  setTimeout(()=>document.addEventListener('click',outsideClose),50);
+}
+function outsideClose(e){const p=document.getElementById('bpanel');if(p&&!p.contains(e.target))closeBPanel();}
+function closeBPanel(){const p=document.getElementById('bpanel');if(p)p.remove();document.removeEventListener('click',outsideClose);}
+function upgBuilding(bid,r,c){
+  const b=G.buildings[bid],def=BUILDINGS.find(x=>x.id===b.type);
+  if(b.level>=def.max)return;
+  const cost=Math.floor(def.upg*Math.pow(1.5,b.level-1));
+  if(G.money<cost){addLog(`Need $${cost.toLocaleString()} to upgrade!`,'bad');return;}
+  G.money-=cost;b.level++;recalc();renderCell(r,c);
+  addLog(`${def.name} → Lv${b.level}! +$${(def.inc*b.level).toFixed(1)}/s`,'gold');
+  checkMilestones();updateUI();closeBPanel();openBPanel(bid,r,c);
+}
+function sellBuilding(bid,r,c){
+  const b=G.buildings[bid],def=BUILDINGS.find(x=>x.id===b.type);
+  const val=Math.floor(def.cost*.4*b.level);
+  G.money+=val;delete G.buildings[bid];delete G.grid[`${r}_${c}`];
+  recalc();clearCell(r,c);
+  addLog(`Demolished ${def.name}. +$${val.toLocaleString()}`,'');
+  updateUI();closeBPanel();
+}
+function renderCell(r,c){
+  const el=document.getElementById(`c${r}_${c}`),bid=G.grid[`${r}_${c}`];
+  if(!el||!bid)return;
+  const b=G.buildings[bid],def=BUILDINGS.find(x=>x.id===b.type);
+  el.innerHTML=`<span style="font-size:1.15rem;line-height:1">${def.icon}</span><span style="position:absolute;bottom:1px;right:3px;font-family:'Orbitron',sans-serif;font-size:.44rem;color:#ffd700;font-weight:700">Lv${b.level}</span>`;
+  el.style.background=def.color+'dd';el.style.borderColor=b.level>=def.max?'#ffd700':'rgba(0,200,255,.4)';
+}
+function clearCell(r,c){
+  const el=document.getElementById(`c${r}_${c}`);if(!el)return;
+  const info=MAPLAYOUT[r][c];el.style.background='';el.style.borderColor='';
+  el.innerHTML=info.water?'<span style="opacity:.35">🌊</span>':'';
+}
+
+// ═══════════════ BUILD LIST ═══════════════
+function renderBuildList(){
+  const el=document.getElementById('build-list');el.innerHTML='';
+  BUILDINGS.forEach(b=>{
+    const div=document.createElement('div');
+    div.className='bitem'+(b.unlocked?'':' lck')+(G.selBuild===b.id?' sel':'');
+    div.innerHTML=`<div class="bicon" style="background:${b.color}cc">${b.icon}</div><div><div class="bname">${b.name}</div><div class="bcost">$${b.cost.toLocaleString()}</div><div class="binc">+$${b.inc}/s${b.water?' 🌊':''}</div></div>`;
+    if(b.unlocked){
+      div.addEventListener('click',()=>{G.selBuild=G.selBuild===b.id?null:b.id;renderBuildList();});
+      div.addEventListener('mouseenter',e=>{
+        const tt=document.getElementById('tt');
+        tt.innerHTML=`<strong>${b.icon} ${b.name}</strong><div>${b.desc}</div><div style="color:#ffd700;margin-top:4px">$${b.cost.toLocaleString()}</div><div style="color:#00ff9d">+$${b.inc}/s</div>${b.water?'<div style="color:#ff6b35;margin-top:3px">⚠ Water tile required</div>':''}`;
+        tt.style.display='block';tt.style.left=(e.clientX+12)+'px';tt.style.top=(e.clientY-8)+'px';
+      });
+      div.addEventListener('mousemove',e=>{const tt=document.getElementById('tt');tt.style.left=(e.clientX+12)+'px';tt.style.top=(e.clientY-8)+'px';});
+      div.addEventListener('mouseleave',hideTT);
+    }
+    el.appendChild(div);
+  });
+  // Land section
+  const unowned=PARCELS.filter(p=>!G.ownedParcels.has(p.id));
+  if(unowned.length){
+    const sec=document.createElement('div');
+    sec.style.cssText='margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,200,255,.15)';
+    sec.innerHTML='<div class="ptitle" style="margin-bottom:6px">🗺 Land</div>';
+    unowned.forEach(p=>{
+      const d=document.createElement('div');
+      d.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:5px 6px;border:1px solid rgba(0,200,255,.15);border-radius:5px;margin-bottom:4px;cursor:pointer;font-size:.66rem;transition:background .15s';
+      d.innerHTML=`<span>${p.name}</span><span style="color:#ffd700;font-size:.6rem">$${p.cost.toLocaleString()}</span>`;
+      d.addEventListener('click',()=>promptBuy(p.id));
+      d.addEventListener('mouseover',()=>d.style.background='rgba(0,200,255,.08)');
+      d.addEventListener('mouseout',()=>d.style.background='');
+      sec.appendChild(d);
+    });
+    el.appendChild(sec);
+  }
+}
+
+// ═══════════════ RESEARCH ═══════════════
+function renderResearch(){
+  const el=document.getElementById('research-list');el.innerHTML='';
+  RESEARCH.forEach(r=>{
+    const done=!!G.research[r.id],div=document.createElement('div');
+    div.className='ritem'+(done?' done':'');
+    div.innerHTML=`<div class="rname">${done?'✅':'🔬'} ${r.name}</div><div class="rdesc">${r.desc}</div><div class="rcost">${done?'Researched':'🔬 '+r.cost+' tech pts'}</div>`;
+    if(!done)div.addEventListener('click',()=>doResearch(r));
+    el.appendChild(div);
+  });
+}
+function doResearch(r){
+  if(G.research[r.id])return;
+  if(G.techPoints<r.cost){addLog(`Need ${r.cost} tech pts (have ${Math.floor(G.techPoints)})`,'bad');return;}
+  G.techPoints-=r.cost;G.research[r.id]=true;
+  const unlock={pipes:'tower',desal:'desal',luxury:'resort',recycle:'recycle',uv:'uvplant',nano:'nano'};
+  if(unlock[r.id]){const b=BUILDINGS.find(x=>x.id===unlock[r.id]);if(b)b.unlocked=true;}
+  addLog(`Research: ${r.name} complete!`,'gold');
+  recalc();renderResearch();renderBuildList();updateUI();checkMilestones();
+}
+
+// ═══════════════ REP LEVEL HELPERS ═══════════════
+function currentRepLevel(){return REP_LEVELS[Math.min(G.repLevel,5)-1]||REP_LEVELS[0];}
+function nextRepLevel(){return G.repLevel<5?REP_LEVELS[G.repLevel]:null;}
+function repXPProgress(){
+  const cur=currentRepLevel(), nxt=nextRepLevel();
+  if(!nxt) return 1;
+  const start=cur.xpNeeded, end=nxt.xpNeeded;
+  return Math.min(1,(G.repXP-start)/(end-start));
+}
+
+// XP gained per second — from buildings (rep score) + income rate
+// Rate is deliberately slow to make higher levels feel earned
+function repXPRate(){
+  let repScore=0;
+  Object.values(G.buildings).forEach(b=>{
+    const d=BUILDINGS.find(x=>x.id===b.type);if(d)repScore+=d.rep*Math.min(b.level,3);
+  });
+  repScore+=G.ownedParcels.size*3;
+  // XP rate: base is very slow; gets dramatically harder each level
+  return (repScore*0.1)/Math.pow(G.repLevel,1.45);
+}
+
+function tickRepXP(dt){
+  if(G.repLevel>=5) return;
+  const rate=repXPRate();
+  G.repXP+=rate*dt;
+  G.reputation=Math.floor(G.repXP); // keep reputation as display value
+  const nxt=nextRepLevel();
+  if(nxt&&G.repXP>=nxt.xpNeeded){
+    G.repLevel=nxt.lv;
+    recalc(); // reapply bonuses
+    addLog(`🎉 Reputation leveled up: ${currentRepLevel().icon} ${currentRepLevel().name} (Lv${G.repLevel})!`,'gold');
+    checkMilestones();
+    _lastTier=''; // force badge refresh
+    if(document.getElementById('pane-rep').classList.contains('active')) renderRepPane();
+  }
+}
+
+// ═══════════════ RECALC ═══════════════
+function recalc(){
+  let inc=0,cust=0,tech=0,maint=0;
+  const im=1+(G.research.pressure?.25:0)+(G.research.automation?.5:0);
+  const cm=1+(G.research.marketing?.2:0);
+  const mm=G.research.smart?.5:1;
+  G.incMult=im;
+  Object.values(G.buildings).forEach(b=>{
+    const d=BUILDINGS.find(x=>x.id===b.type);if(!d)return;
+    inc+=d.inc*b.level*im;
+    cust+=Math.floor(d.cust*b.level*cm);
+    tech+=d.tech*b.level;
+    maint+=d.maint*b.level*mm;
+  });
+  // Apply rep level bonuses to ALL categories
+  const rl=currentRepLevel();
+  inc  *= (1+rl.incBonus);
+  cust  = Math.floor(cust*(1+rl.custBonus));
+  tech *= (1+rl.techBonus);
+  // Contract income bonus applied at contract accept time, reward at completion
+  inc*=(1+G.rebirthBonus);
+  let ci=0;G.activeContracts.forEach(c=>ci+=c.inc*(1+rl.contractBonus));
+  if(G.droughtActive)inc*=.7;
+  G.grossIncome=inc+ci;G.maintenance=maint;G.income=inc+ci-maint;
+  G.customers=cust;G.techGen=tech;
+}
+
+// ═══════════════ MILESTONES ═══════════════
+function checkMilestones(){
+  MILESTONES.forEach(m=>{
+    if(!m.done&&m.check()){
+      m.done=true;G.milestoneDone[m.id]=true;
+      G.money+=m.reward;
+      addLog(`🏆 ${m.label} — +$${m.reward.toLocaleString()}`,'gold');
+      renderMilestones();
+    }
+  });
+}
+function renderMilestones(){
+  document.getElementById('milestones-list').innerHTML=MILESTONES.map(m=>`
+    <div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid rgba(0,200,255,.06);font-size:.64rem">
+      <span>${m.done?'✅':'⬜'}</span>
+      <span style="flex:1;color:${m.done?'rgba(0,200,255,.4)':'#b8e8ff'};${m.done?'text-decoration:line-through':''}">${m.label}</span>
+      <span style="color:#ffd700;font-size:.57rem">$${m.reward.toLocaleString()}</span>
+    </div>`).join('');
+}
+
+// ═══════════════ CONTRACTS ═══════════════
+let _cSig='';
+function availContracts(){return CONTRACTS.filter(c=>bCount()>=c.req&&!G.activeContracts.find(a=>a.id===c.id)).slice(0,2);}
+function renderContracts(){
+  const el=document.getElementById('contracts-list'),avail=availContracts();
+  const sig=G.activeContracts.map(c=>c.id).join('|')+':'+avail.map(c=>c.id).join('|');
+  if(sig!==_cSig){
+    _cSig=sig;let h='';
+    G.activeContracts.forEach(c=>{
+      h+=`<div style="padding:6px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.2);border-radius:5px;margin-bottom:5px;font-size:.65rem">
+        <div style="display:flex;justify-content:space-between"><span>${c.icon} ${c.name}</span><span style="color:#00ff9d">+$${c.inc}/s</span></div>
+        <div class="pbar" style="margin:3px 0"><div class="pfill" id="cpb-${c.id}" style="background:#00ff9d"></div></div>
+        <div id="ctm-${c.id}" style="color:rgba(0,200,255,.5)"></div></div>`;
+    });
+    if(avail.length){
+      h+=`<div style="font-size:.58rem;color:rgba(0,200,255,.5);margin:5px 0;text-transform:uppercase;letter-spacing:1px">Available</div>`;
+      avail.forEach(c=>{h+=`<div onclick="takeContract('${c.id}')" style="padding:6px;background:rgba(0,200,255,.04);border:1px solid rgba(0,200,255,.14);border-radius:5px;margin-bottom:5px;font-size:.65rem;cursor:pointer" onmouseover="this.style.background='rgba(0,200,255,.1)'" onmouseout="this.style.background='rgba(0,200,255,.04)'">
+        <div style="display:flex;justify-content:space-between"><span>${c.icon} ${c.name}</span><span style="color:#ffd700">$${c.reward.toLocaleString()}</span></div>
+        <div style="color:rgba(0,200,255,.5);margin-top:2px">+$${c.inc}/s · ${c.dur}s · ${c.req} bldgs</div></div>`;});
+    }else if(!G.activeContracts.length){h+='<div style="font-size:.65rem;color:rgba(0,200,255,.4);text-align:center;padding:10px">Build more to unlock deals</div>';}
+    el.innerHTML=h;
+  }else{
+    G.activeContracts.forEach(c=>{
+      const pct=Math.min(100,((c.elapsed||0)/c.dur)*100);
+      const pb=document.getElementById('cpb-'+c.id),ct=document.getElementById('ctm-'+c.id);
+      if(pb)pb.style.width=pct+'%';if(ct)ct.textContent=Math.ceil(c.dur-(c.elapsed||0))+'s left';
+    });
+  }
+}
+function takeContract(id){
+  const c=CONTRACTS.find(x=>x.id===id);
+  if(!c||bCount()<c.req||G.activeContracts.find(a=>a.id===id))return;
+  G.activeContracts.push({...c,elapsed:0});_cSig='';
+  recalc();addLog(`${c.icon} Contract: ${c.name}! +$${c.inc}/s for ${c.dur}s`,'good');updateUI();renderContracts();
+}
+
+// ═══════════════ REP PANE ═══════════════
+function renderRepPane(){
+  const el=document.getElementById('rep-pane');
+  const cur=currentRepLevel(), nxt=nextRepLevel();
+  const pct=Math.round(repXPProgress()*100);
+  const xpRate=repXPRate();
+  el.innerHTML=`
+    <div style="text-align:center;padding:12px;margin-bottom:10px;border-radius:7px;background:${cur.bg};border:1px solid ${cur.color}50">
+      <div style="font-size:2.2rem">${cur.icon}</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.88rem;font-weight:700;color:${cur.color};margin:4px 0;letter-spacing:2px">LV${cur.lv} — ${cur.name}</div>
+      <div style="font-size:.6rem;color:var(--accent2);margin-bottom:6px">${cur.desc}</div>
+      ${nxt?`
+        <div style="display:flex;justify-content:space-between;font-size:.57rem;color:var(--dim);margin-bottom:3px">
+          <span>${Math.floor(G.repXP)} XP</span><span>${nxt.xpNeeded} XP needed</span>
+        </div>
+        <div class="pbar"><div class="pfill" id="rep-xp-bar" style="width:${pct}%;background:linear-gradient(90deg,${cur.color},${nxt.color});transition:width .5s"></div></div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:4px">+${xpRate.toFixed(3)} XP/s → <b style="color:${nxt.color}">LV${nxt.lv} ${nxt.name}</b></div>
+        <div style="font-size:.54rem;color:rgba(0,200,255,.35);margin-top:2px">Rate slows each level — build more to earn XP faster</div>
+      `:`<div style="margin-top:5px;font-size:.65rem;color:#ffd700;font-weight:700">✦ MAXIMUM TIER REACHED ✦</div>`}
+    </div>
+    <div style="font-size:.57rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px">All Levels</div>
+    ${REP_LEVELS.map(lv=>{
+      const unlocked=G.repLevel>=lv.lv, isCur=G.repLevel===lv.lv;
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:6px;margin-bottom:5px;border:1px solid ${isCur?lv.color+'80':'rgba(0,200,255,.1)'};background:${isCur?lv.bg:'transparent'};opacity:${unlocked?1:0.4}">
+        <span style="font-size:1.1rem;flex-shrink:0;margin-top:1px">${lv.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <span style="font-family:'Orbitron',sans-serif;font-size:.63rem;font-weight:700;color:${lv.color}">LV${lv.lv} ${lv.name}</span>
+            ${unlocked?'<span style="font-size:.56rem;color:#ffd700">✓</span>':''}
+            ${isCur?`<span style="font-size:.5rem;font-family:'Orbitron',sans-serif;color:${lv.color};border:1px solid ${lv.color}60;padding:1px 4px;border-radius:3px">CURRENT</span>`:''}
+          </div>
+          <div style="font-size:.56rem;color:var(--dim);margin-top:2px">${lv.xpNeeded>0?lv.xpNeeded+' XP':'Starting level'}</div>
+          <div style="font-size:.58rem;color:var(--text);margin-top:3px">${lv.desc}</div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+// ═══════════════ STATS PANE ═══════════════
+function initStatsPane(){
+  const cur=currentRepLevel();
+  document.getElementById('empire-stats').innerHTML=`
+    <div class="mstat"><span class="ml">Buildings</span><span class="mv" id="sv-bld">0</span></div>
+    <div class="mstat"><span class="ml">Land Owned</span><span class="mv" id="sv-land">1/${PARCELS.length}</span></div>
+    <div class="mstat"><span class="ml">Gross Income</span><span class="mv" id="sv-gross" style="color:#00ff9d"></span></div>
+    <div class="mstat"><span class="ml">Maintenance</span><span class="mv" id="sv-maint" style="color:#ff6b35"></span></div>
+    <div class="mstat"><span class="ml">Net Income</span><span class="mv" id="sv-net"></span></div>
+    <div class="mstat"><span class="ml">Total Earned</span><span class="mv" id="sv-total"></span></div>
+    <div class="mstat"><span class="ml">Tech/s</span><span class="mv" id="sv-tech2"></span></div>
+    <div class="mstat"><span class="ml">Rep Level</span><span class="mv" id="sv-rep2" style="color:${cur.color}"></span></div>
+    <div class="pbar" style="margin-bottom:2px"><div class="pfill" id="sv-repbar" style="background:linear-gradient(90deg,${cur.color},#ffd700)"></div></div>
+    <div style="font-size:.56rem;color:var(--dim);margin-bottom:6px" id="sv-repxp"></div>
+    <div id="sv-drought" style="display:none;margin-top:6px;padding:4px 7px;background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.4);border-radius:4px;font-size:.62rem;color:#ff6b35">☀️ DROUGHT — income -30%</div>
+    <div id="sv-rbinfo" style="display:none;margin-top:6px;padding:4px 7px;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.3);border-radius:4px;font-size:.62rem;color:#ffd700"></div>`;
+}
+function setText(id,val){const el=document.getElementById(id);if(el&&el.textContent!==String(val))el.textContent=val;}
+function updateStatsPane(){
+  setText('sv-bld',bCount());setText('sv-land',`${G.ownedParcels.size}/${PARCELS.length}`);
+  setText('sv-gross',`+$${(G.grossIncome||0).toFixed(1)}/s`);
+  setText('sv-maint',`-$${(G.maintenance||0).toFixed(2)}/s`);
+  const ni=document.getElementById('sv-net');
+  if(ni){ni.textContent=(G.income>=0?'+':'')+'$'+G.income.toFixed(1)+'/s';ni.style.color=G.income>=0?'#ffd700':'#f44';}
+  setText('sv-total','$'+Math.floor(G.totalEarned).toLocaleString());
+  setText('sv-tech2','+'+G.techGen.toFixed(1));
+  const cur=currentRepLevel(),nxt=nextRepLevel();
+  setText('sv-rep2',`LV${G.repLevel} ${cur.name}`);
+  const rb=document.getElementById('sv-repbar');
+  if(rb){rb.style.width=(repXPProgress()*100)+'%';rb.style.background=`linear-gradient(90deg,${cur.color},${nxt?nxt.color:'#ffd700'})`;}
+  const xpEl=document.getElementById('sv-repxp');
+  if(xpEl)xpEl.textContent=nxt?`${Math.floor(G.repXP)}/${nxt.xpNeeded} XP (+${repXPRate().toFixed(3)}/s)`:`MAX LEVEL`;
+  const dr=document.getElementById('sv-drought');if(dr)dr.style.display=G.droughtActive?'block':'none';
+  const ri=document.getElementById('sv-rbinfo');
+  if(ri){ri.style.display=G.rebirths>0?'block':'none';if(G.rebirths>0)ri.textContent=`✨ Rebirth ×${G.rebirths} — +${(G.rebirthBonus*100).toFixed(0)}% income`;}
+}
+
+// ═══════════════ REP BADGE ═══════════════
+let _lastTier='';
+function updateRepBadge(){
+  const lv=currentRepLevel();
+  const key=`${lv.lv}`;
+  if(key!==_lastTier){
+    _lastTier=key;
+    const el=document.getElementById('rep-badge');
+    el.textContent=`${lv.icon} LV${lv.lv} ${lv.name}`;
+    el.style.color=lv.color;el.style.borderColor=lv.color+'60';el.style.background=lv.bg;
+  }
+  document.getElementById('rebirth-btn').style.display=(G.repLevel>=5&&G.totalEarned>=1000000)?'block':'none';
+}
+
+// ═══════════════ TABS ═══════════════
+function switchTab(name){
+  const names=['stats','rep','research','contracts','milestones'];
+  document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.rpane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  if(name==='rep')renderRepPane();
+}
+
+// ═══════════════ UI ═══════════════
+let _lm=-1,_li=-1,_lc=-1,_lt=-1;
+function updateUI(){
+  const m=Math.floor(G.money),inc=Math.round(G.income*10),cust=G.customers,tech=Math.floor(G.techPoints);
+  if(m!==_lm){_lm=m;document.getElementById('s-money').textContent='$'+m.toLocaleString();}
+  if(inc!==_li){_li=inc;document.getElementById('s-income').textContent=(G.income>=0?'+':'')+'$'+G.income.toFixed(1)+'/s';}
+  if(cust!==_lc){_lc=cust;document.getElementById('s-cust').textContent=cust.toLocaleString();}
+  if(tech!==_lt){_lt=tech;document.getElementById('s-tech').textContent=tech;}
+  updateStatsPane();updateRepBadge();
+}
+
+// ═══════════════ LOG ═══════════════
+function addLog(msg,type=''){G.events.unshift({msg,type});if(G.events.length>12)G.events.pop();renderLog();}
+function renderLog(){document.getElementById('log-entries').innerHTML=G.events.map(e=>`<div class="logrow ${e.type}">${e.msg}</div>`).join('');}
+
+// ═══════════════ TOOLTIP ═══════════════
+function cellHover(e,r,c){
+  const bid=G.grid[`${r}_${c}`];if(!bid)return;
+  const b=G.buildings[bid],def=BUILDINGS.find(x=>x.id===b.type),mm=G.research.smart?.5:1;
+  const tt=document.getElementById('tt');
+  tt.innerHTML=`<strong>${def.icon} ${def.name} Lv${b.level}</strong><div style="color:#00ff9d">+$${(def.inc*b.level*G.incMult).toFixed(1)}/s</div><div style="color:#ff6b35">-$${(def.maint*b.level*mm).toFixed(2)}/s</div><div>${def.cust*b.level} customers</div><div style="font-size:.6rem;margin-top:3px;color:rgba(0,200,255,.6)">Click to manage</div>`;
+  tt.style.display='block';tt.style.left=(e.clientX+12)+'px';tt.style.top=(e.clientY-8)+'px';
+}
+function hideTT(){document.getElementById('tt').style.display='none';}
+
+// ═══════════════ POPUPS ═══════════════
+const _popSet=new Set();
+function popupCell(r,c,txt){
+  const key=`${r}_${c}`,cell=document.getElementById(`c${r}_${c}`);
+  if(!cell||_popSet.has(key))return;
+  _popSet.add(key);
+  const s=document.createElement('div');s.className='ipop';s.textContent=txt;cell.appendChild(s);
+  setTimeout(()=>{s.remove();_popSet.delete(key);},900);
+}
+
+// ═══════════════ SPEED ═══════════════
+function setSpeed(s){G.speed=s;document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));document.getElementById({1:'spd1',2:'spd2',4:'spd3'}[s]).classList.add('active');}
+
+// ═══════════════ SAVE / LOAD / RESET / REBIRTH ═══════════════
+function saveGame(){
+  try{
+    localStorage.setItem('aquatycoon_v2',JSON.stringify({
+      money:G.money,grid:G.grid,buildings:G.buildings,nextId:G.nextId,
+      research:G.research,totalEarned:G.totalEarned,events:G.events,
+      activeContracts:G.activeContracts,droughtActive:G.droughtActive,droughtTimer:G.droughtTimer,
+      ownedParcels:Array.from(G.ownedParcels),
+      rebirths:G.rebirths,rebirthBonus:G.rebirthBonus,
+      milestoneDone:G.milestoneDone,speed:G.speed,
+      repXP:G.repXP,repLevel:G.repLevel,
+    }));
+    addLog('💾 Saved!','good');
+  }catch(e){addLog('⚠ Save failed','bad');}
+}
+
+function loadGame(){
+  try{
+    const raw=localStorage.getItem('aquatycoon_v2');if(!raw)return false;
+    const s=JSON.parse(raw);
+    Object.assign(G,s);
+    G.ownedParcels=new Set(s.ownedParcels||['p0']);
+    G.milestoneDone=s.milestoneDone||{};
+    G.activeContracts=(s.activeContracts||[]).map(c=>({...c}));
+    G.repXP=s.repXP||0; G.repLevel=s.repLevel||1;
+    Object.values(G.buildings).forEach(b=>{const d=BUILDINGS.find(x=>x.id===b.type);if(d)d.unlocked=true;});
+    Object.keys(G.research).forEach(rid=>{
+      const u={pipes:'tower',desal:'desal',luxury:'resort',recycle:'recycle',uv:'uvplant',nano:'nano'};
+      if(u[rid]){const b=BUILDINGS.find(x=>x.id===u[rid]);if(b)b.unlocked=true;}
+    });
+    return true;
+  }catch(e){return false;}
+}
+
+function confirmReset(){
+  openModal(
+    '🗑 Reset Save',
+    'This will <b style="color:#ff6b35">permanently delete all progress</b> including rebirths. This cannot be undone.',
+    ()=>{localStorage.removeItem('aquatycoon_v2');location.reload();},
+    'Delete Everything','confirm'
+  );
+}
+
+function confirmRebirth(){
+  const bonus=Math.min(5.0,(G.rebirths+1)*0.25);
+  const newTotal=G.rebirthBonus+bonus;
+  openModal(
+    '✨ Rebirth',
+    `<b style="color:#ffd700">Prestige your water empire.</b><br><br>
+    You will <b style="color:#ff6b35">lose all cash, buildings, land expansions, and research</b>.<br><br>
+    You gain a permanent <b style="color:#00ff9d">+${(bonus*100).toFixed(0)}% income multiplier</b>.<br><br>
+    <span style="font-size:.85em;color:var(--dim)">After rebirth: ×${G.rebirths+1} rebirths · total bonus +${(newTotal*100).toFixed(0)}%</span><br><br>
+    <b style="color:#ffd700">Requirement: Titan reputation (LV5) + $1M total earned.</b>`,
+    ()=>doRebirth(),
+    '✨ Rebirth Now','rebirth-btn'
+  );
+}
+
+function doRebirth(){
+  const rb=G.rebirths+1,newBonus=G.rebirthBonus+Math.min(5.0,rb*0.25);
+  G=defaultState();G.rebirths=rb;G.rebirthBonus=newBonus;
+  G.repXP=0;G.repLevel=1;
+  syncMilestones();
+  BUILDINGS.forEach(b=>{b.unlocked=b.id==='well'||b.id==='pump'||b.id==='filter';});
+  _lm=_li=_lc=_lt=-1;_lastTier='';_cSig='';
+  initGrid();renderBuildList();renderResearch();recalc();initStatsPane();updateUI();renderMilestones();renderContracts();
+  const rc=document.getElementById('rebirth-count');rc.style.display='block';rc.textContent=`✨ ×${rb}`;
+  addLog(`✨ Rebirth ×${rb}! Permanent +${(newBonus*100).toFixed(0)}% income bonus`,'gold');
+  addLog('🌊 A new empire begins...','good');
+  saveGame();
+}
+
+// ═══════════════ MODAL ═══════════════
+function openModal(title,body,onConfirm,lbl='Confirm',cls='confirm'){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=body;
+  const btn=document.getElementById('modal-confirm');
+  btn.textContent=lbl;btn.className='mbtn '+cls;
+  btn.onclick=()=>{closeModal();onConfirm();};
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
+
+// ═══════════════ TICK ═══════════════
+let lastT=performance.now(),newsT=0,uiT=0,evT=0,flashT=0,saveT=0;
+function tick(now){
+  const raw=Math.min((now-lastT)/1000,.1);lastT=now;
+  const dt=raw*G.speed;
+  G.money+=G.income*dt;
+  if(G.income>0)G.totalEarned+=G.income*dt;
+  G.techPoints+=G.techGen*dt*.05;
+  tickRepXP(dt);
+  if(G.droughtActive){G.droughtTimer-=dt;if(G.droughtTimer<=0){G.droughtActive=false;recalc();addLog('🌧 Drought ended!','good');}}
+  let cc=false;
+  G.activeContracts=G.activeContracts.filter(c=>{
+    c.elapsed=(c.elapsed||0)+dt;
+    if(c.elapsed>=c.dur){G.money+=c.reward;addLog(`${c.icon} Contract done: +$${c.reward.toLocaleString()}`,'gold');cc=true;_cSig='';return false;}
+    return true;
+  });
+  if(cc)recalc();
+  uiT+=raw;if(uiT>=.2){uiT=0;updateUI();renderContracts();}
+  flashT+=raw;
+  if(flashT>=1&&G.income>0){
+    flashT=0;const ids=Object.keys(G.buildings);
+    if(ids.length){const id=ids[Math.floor(Math.random()*ids.length)],b=G.buildings[id],def=BUILDINGS.find(x=>x.id===b.type);if(def)popupCell(b.y,b.x,`+$${(def.inc*b.level).toFixed(0)}`);}
+  }
+  newsT+=raw;if(newsT>12){newsT=0;document.getElementById('ticker-txt').textContent=NEWS[Math.floor(Math.random()*NEWS.length)];}
+  evT+=raw;if(evT>=30){evT=0;randEvent();}
+  saveT+=raw;if(saveT>=60){saveT=0;saveGame();}
+  if(Math.floor(now/1000)!==Math.floor((now-raw*1000)/1000))checkMilestones();
+  requestAnimationFrame(tick);
+}
+
+function randEvent(){
+  if(!bCount())return;
+  const evs=[
+    {msg:'🌧 Monsoon! +$1,000',fn:()=>{G.money+=1000;}},
+    {msg:'☀️ Drought! -30% income for 20s',fn:()=>{G.droughtActive=true;G.droughtTimer=20;recalc();},bad:true},
+    {msg:'🔧 Pipe burst! -$300',fn:()=>{G.money=Math.max(0,G.money-300);},bad:true},
+    {msg:'🎯 Government grant! +$500',fn:()=>{G.money+=500;}},
+    {msg:'🏆 Industry award! +$200',fn:()=>{G.money+=200;}},
+    {msg:'💧 Natural spring found! +$2,000',fn:()=>{G.money+=2000;}},
+    {msg:'📣 Viral press coverage! Customers surge',fn:()=>{}},
+  ];
+  const ev=evs[Math.floor(Math.random()*evs.length)];ev.fn();
+  addLog(ev.msg,ev.bad?'bad':'gold');
+}
+
+// ═══════════════ INIT ═══════════════
+const loaded=loadGame();
+syncMilestones();
+initGrid();
+renderBuildList();
+renderResearch();
+recalc();
+initStatsPane();
+updateUI();
+renderMilestones();
+renderContracts();
+if(G.rebirths>0){const rc=document.getElementById('rebirth-count');rc.style.display='block';rc.textContent=`✨ ×${G.rebirths}`;}
+if(G.speed&&G.speed!==1)setSpeed(G.speed);
+if(loaded){
+  addLog('💾 Save loaded — welcome back!','good');
+}else{
+  addLog('🌊 Select a building then click the map to place it.','good');
+  addLog('💡 Click buildings to upgrade or demolish them.','');
+  addLog('🗺 Buy land expansions in the Build panel or by clicking locked areas.','');
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
