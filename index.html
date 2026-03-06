@@ -12,7 +12,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AQUA TYCOON</title>
+    <title>HydroSafe Tycoon</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {
@@ -737,13 +737,143 @@
             background: rgba(0,200,255,.2);
             border-radius: 2px
         }
+        /* ── TUTORIAL ── */
+        #tut-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 800;
+            background: rgba(0,5,15,0);
+            pointer-events: none;
+            transition: background .4s
+        }
+
+            #tut-overlay.active {
+                display: block;
+                background: rgba(0,5,15,.8);
+                pointer-events: all
+            }
+
+        #tut-spotlight {
+            position: fixed;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 801;
+            transition: all .4s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 0 0 9999px rgba(0,5,15,.8);
+            outline: 2px solid rgba(0,200,255,.7);
+            outline-offset: 3px
+        }
+
+        #tut-card {
+            display: none;
+            position: fixed;
+            z-index: 900;
+            background: rgba(3,18,38,.98);
+            border: 1px solid rgba(0,200,255,.5);
+            border-radius: 10px;
+            padding: 18px 20px;
+            width: 300px;
+            box-shadow: 0 0 40px rgba(0,200,255,.2);
+            font-family: "Exo 2",sans-serif;
+            color: var(--text);
+            transition: top .4s cubic-bezier(.4,0,.2,1),left .4s cubic-bezier(.4,0,.2,1)
+        }
+
+            #tut-card.active {
+                display: block
+            }
+
+        #tut-step-lbl {
+            font-family: "Orbitron",sans-serif;
+            font-size: .52rem;
+            color: var(--dim);
+            letter-spacing: 2px;
+            margin-bottom: 6px
+        }
+
+        #tut-title {
+            font-family: "Orbitron",sans-serif;
+            font-size: .82rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-weight: 700
+        }
+
+        #tut-body {
+            font-size: .75rem;
+            line-height: 1.55;
+            color: var(--text)
+        }
+
+            #tut-body b {
+                color: #fff
+            }
+
+        #tut-dots {
+            display: flex;
+            gap: 5px;
+            align-items: center
+        }
+
+        .tut-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(0,200,255,.2);
+            transition: background .2s
+        }
+
+            .tut-dot.on {
+                background: var(--accent)
+            }
+
+        #tut-skip {
+            background: none;
+            border: 1px solid rgba(0,200,255,.2);
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: var(--dim);
+            font-family: "Exo 2",sans-serif;
+            font-size: .7rem;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+            #tut-skip:hover {
+                border-color: var(--accent3);
+                color: var(--accent3)
+            }
+
+        #tut-next {
+            background: rgba(0,200,255,.12);
+            border: 1px solid rgba(0,200,255,.4);
+            border-radius: 5px;
+            padding: 5px 14px;
+            color: var(--accent);
+            font-family: "Orbitron",sans-serif;
+            font-size: .65rem;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all .15s
+        }
+
+            #tut-next:hover {
+                background: rgba(0,200,255,.25)
+            }
+
+            #tut-next.finish {
+                background: rgba(0,255,157,.12);
+                border-color: rgba(0,255,157,.5);
+                color: var(--accent2)
+            }
     </style>
 </head>
 <body>
 <canvas id="canvas-bg"></canvas>
 <div id="game">
   <div id="topbar">
-    <div id="logo">💧 AQUA</div>
+    <div id="logo">💧 HYDROSAFE</div>
     <div class="sblock"><span>💰</span><div><div class="sval" id="s-money">$1,000</div><div class="slbl">Cash</div></div></div>
     <div class="sblock"><span>📈</span><div><div class="sval" id="s-income">+$0/s</div><div class="slbl">Income</div></div></div>
     <div class="sblock"><span>👥</span><div><div class="sval" id="s-cust">0</div><div class="slbl">Customers</div></div></div>
@@ -756,6 +886,7 @@
       <button class="speed-btn" onclick="setSpeed(4)" id="spd3">▶▶▶4x</button>
     </div>
     <div id="save-btns">
+      <button class="hdr-btn" onclick="startTutorial()" style="color:rgba(0,200,255,.7)">❓ Help</button>
       <button class="hdr-btn" onclick="saveGame()">💾 Save</button>
       <button class="hdr-btn danger" onclick="confirmReset()">🗑 Reset</button>
       <button class="hdr-btn rebirth-h" onclick="confirmRebirth()" id="rebirth-btn" style="display:none">✨ Rebirth</button>
@@ -781,11 +912,25 @@
     <div id="pane-milestones" class="rpane"><div id="milestones-list"></div></div>
   </div>
   <div id="bottom-bar">
-    <div id="news-ticker"><span id="ticker-lbl">◈ MARKET</span><span id="ticker-txt">Welcome to Aqua Tycoon — build your water empire!</span></div>
+    <div id="news-ticker"><span id="ticker-lbl">◈ MARKET</span><span id="ticker-txt">Welcome to HydroSafe Tycoon — build your water empire!</span></div>
     <div id="event-log"><div class="ptitle">📋 Log</div><div id="log-entries"></div></div>
   </div>
 </div>
 <div id="tt"></div>
+<!-- TUTORIAL -->
+<div id="tut-overlay"></div>
+<div id="tut-card">
+  <div id="tut-step-lbl">TUTORIAL</div>
+  <div id="tut-title"></div>
+  <div id="tut-body"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+    <div id="tut-dots"></div>
+    <div style="display:flex;gap:8px">
+      <button id="tut-skip" onclick="endTutorial()">Skip Tutorial</button>
+      <button id="tut-next" onclick="tutNext()">Next &#8594;</button>
+    </div>
+  </div>
+</div>
 <div id="modal-bg">
   <div id="modal">
     <h2 id="modal-title"></h2>
@@ -1156,6 +1301,7 @@ function renderBuildList(){
   const unowned=PARCELS.filter(p=>!G.ownedParcels.has(p.id));
   if(unowned.length){
     const sec=document.createElement('div');
+    sec.id='land-section';
     sec.style.cssText='margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,200,255,.15)';
     sec.innerHTML='<div class="ptitle" style="margin-bottom:6px">🗺 Land</div>';
     unowned.forEach(p=>{
@@ -1594,10 +1740,209 @@ if(loaded){
   addLog('💾 Save loaded — welcome back!','good');
 }else{
   addLog('🌊 Select a building then click the map to place it.','good');
+  setTimeout(startTutorial, 600);
   addLog('💡 Click buildings to upgrade or demolish them.','');
   addLog('🗺 Buy land expansions in the Build panel or by clicking locked areas.','');
 }
 requestAnimationFrame(tick);
+
+// ═══════════════ TUTORIAL ═══════════════
+const TUT_STEPS = [
+  {
+    title: 'Welcome to HydroSafe Tycoon',
+    body: 'Build a water empire from scratch — extract, purify, distribute and sell clean water to grow your reputation from a <b>local well-digger</b> to a <b>global water titan</b>.<br><br>This tutorial will walk you through the basics.',
+    targets: [],
+    card: 'center',
+  },
+  {
+    title: 'Your Cash & Income',
+    body: 'These are your key financial stats. <b>Cash</b> is what you spend on buildings and land. <b>Income</b> shows your earnings per second — keep it growing!',
+    targets: [
+      ()=>document.querySelectorAll('#topbar .sblock')[0],
+      ()=>document.querySelectorAll('#topbar .sblock')[1],
+    ],
+    card: 'below',
+  },
+  {
+    title: 'Tech Points',
+    body: '<b>Tech Points</b> are generated by advanced buildings like Filter Plants. Spend them in the <b>Lab</b> tab to unlock new building types and empire-wide income bonuses.',
+    targets: [()=>document.querySelectorAll('#topbar .sblock')[3]],
+    card: 'below',
+  },
+  {
+    title: 'Your Reputation',
+    body: 'This badge shows your current <b>Reputation tier</b>. Earn XP by placing buildings and buying land to level up: Local → Regional → National → Global → 👑 Titan.<br><br>Higher rep unlocks powerful income multipliers.',
+    targets: [()=>document.getElementById('rep-badge')],
+    card: 'below',
+  },
+  {
+    title: 'The Build Panel',
+    body: 'This is your <b>building menu</b>. Click any building to select it, then click an empty map tile to place it.<br><br>Buildings with 🌊 must be placed on a <b>water tile</b>.',
+    targets: [()=>document.getElementById('left-panel')],
+    card: 'right',
+  },
+  {
+    title: 'Start with a Water Well',
+    body: 'The <b>Water Well ⛽</b> is your cheapest starting building. Select it here, then click any empty land tile on the map to place it and start earning income.',
+    targets: [()=>document.querySelector('.bitem')],
+    card: 'right',
+  },
+  {
+    title: 'The Map',
+    body: 'Click tiles here to place selected buildings. Tiles with 🌊 are water tiles. <b>Dark dashed areas</b> are locked land parcels you can buy to expand.<br><br>Click any built structure to <b>upgrade or demolish</b> it.',
+    targets: [()=>document.getElementById('center')],
+    card: 'left',
+  },
+  {
+    title: 'Buying More Land',
+    body: 'Scroll down in the Build panel to find <b>land parcels for sale</b>. Buying land unlocks more tiles and water sources, letting you place far more buildings.<br><br>Owning all 7 parcels is essential to reach Titan reputation.',
+    targets: [()=>document.getElementById('land-section')],
+    card: 'right',
+    onShow: () => {
+      // scroll the build panel down so land section is visible
+      const scroll = document.getElementById('build-scroll');
+      if (scroll) scroll.scrollTop = scroll.scrollHeight;
+    },
+  },
+  {
+    title: 'Stats & Reputation Tabs',
+    body: 'The <b>Stats</b> tab shows your full empire finances. The <b>Rep</b> tab shows your reputation XP progress and the bonuses each tier unlocks.',
+    targets: [
+      ()=>document.querySelector('#rtabs .rtab:nth-child(1)'),
+      ()=>document.querySelector('#rtabs .rtab:nth-child(2)'),
+    ],
+    card: 'left',
+  },
+  {
+    title: 'Research Lab',
+    body: 'The <b>Lab</b> tab lets you spend tech points on research. Early upgrades like <b>Advanced Pipes</b> are cheap. Late-game research like <b>Automation</b> and <b>Nanotechnology</b> costs thousands of points.',
+    targets: [()=>document.querySelector('#rtabs .rtab:nth-child(3)')],
+    card: 'left',
+  },
+  {
+    title: 'Contracts & Goals',
+    body: 'The <b>Deals</b> tab has timed contracts that pay bonus income. The <b>Goals</b> tab tracks milestones that reward you with cash bonuses when reached.',
+    targets: [
+      ()=>document.querySelector('#rtabs .rtab:nth-child(4)'),
+      ()=>document.querySelector('#rtabs .rtab:nth-child(5)'),
+    ],
+    card: 'left',
+  },
+  {
+    title: 'Event Log & News',
+    body: 'The <b>log</b> records events, milestones and contracts. The <b>news ticker</b> carries market headlines. Random events will fire periodically — some help, some hurt.',
+    targets: [()=>document.getElementById('bottom-bar')],
+    card: 'above',
+  },
+  {
+    title: "You're Ready! 💧",
+    body: 'Start with a few <b>Water Wells</b>, reinvest into better buildings, unlock research, buy land, and climb the reputation ladder.<br><br><span class="hl">Good luck, Tycoon.</span>',
+    targets: [],
+    card: 'center',
+  },
+];
+
+let _tutStep = 0;
+let _tutSpotlight = null;
+
+function startTutorial() {
+  _tutStep = 0;
+  if (!_tutSpotlight) {
+    _tutSpotlight = document.createElement('div');
+    _tutSpotlight.id = 'tut-spotlight';
+    document.body.appendChild(_tutSpotlight);
+  }
+  document.getElementById('tut-overlay').classList.add('active');
+  document.getElementById('tut-card').classList.add('active');
+  renderTutStep();
+}
+
+function endTutorial() {
+  document.getElementById('tut-overlay').classList.remove('active');
+  document.getElementById('tut-card').classList.remove('active');
+  if (_tutSpotlight) _tutSpotlight.style.cssText = 'display:none';
+  // scroll build panel back up
+  const scroll = document.getElementById('build-scroll');
+  if (scroll) scroll.scrollTop = 0;
+}
+
+function tutNext() {
+  _tutStep++;
+  if (_tutStep >= TUT_STEPS.length) { endTutorial(); return; }
+  renderTutStep();
+}
+
+function renderTutStep() {
+  const step = TUT_STEPS[_tutStep];
+  const isLast = _tutStep === TUT_STEPS.length - 1;
+
+  document.getElementById('tut-step-lbl').textContent = `STEP ${_tutStep + 1} OF ${TUT_STEPS.length}`;
+  document.getElementById('tut-title').textContent = step.title;
+  document.getElementById('tut-body').innerHTML = step.body;
+  document.getElementById('tut-dots').innerHTML = TUT_STEPS.map((_,i) =>
+    `<div class="tut-dot ${i===_tutStep?'on':''}"></div>`).join('');
+
+  const btn = document.getElementById('tut-next');
+  btn.textContent = isLast ? '✓ Done' : 'Next →';
+  btn.className = isLast ? 'finish' : '';
+
+  // Run any onShow hook (e.g. scroll into view)
+  if (step.onShow) step.onShow();
+
+  // Resolve targets, filter nulls
+  const els = (step.targets || []).map(fn => fn()).filter(Boolean);
+  positionTutorial(els, step.card);
+}
+
+function positionTutorial(els, cardPos) {
+  const card = document.getElementById('tut-card');
+  const spot = _tutSpotlight;
+  const PAD = 8;
+  const CW = 300;
+  const VW = window.innerWidth, VH = window.innerHeight;
+
+  if (!els.length) {
+    spot.style.cssText = 'display:none';
+    // re-read height after content update
+    requestAnimationFrame(() => {
+      const CH = card.offsetHeight || 220;
+      card.style.left = Math.round((VW - CW) / 2) + 'px';
+      card.style.top  = Math.round((VH - CH) / 2) + 'px';
+    });
+    return;
+  }
+
+  // Union bounding rect across all target elements
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  els.forEach(el => {
+    const r = el.getBoundingClientRect();
+    minX = Math.min(minX, r.left);
+    minY = Math.min(minY, r.top);
+    maxX = Math.max(maxX, r.right);
+    maxY = Math.max(maxY, r.bottom);
+  });
+
+  // Spotlight covers union rect
+  spot.style.cssText = `display:block;left:${minX-PAD}px;top:${minY-PAD}px;width:${maxX-minX+PAD*2}px;height:${maxY-minY+PAD*2}px;`;
+
+  requestAnimationFrame(() => {
+    const CH = card.offsetHeight || 220;
+    let cx, cy;
+    const rw = maxX - minX, rh = maxY - minY;
+    const rcx = minX + rw/2, rcy = minY + rh/2;
+
+    if (cardPos === 'right')      { cx = maxX + PAD + 10; cy = rcy - CH/2; }
+    else if (cardPos === 'left')  { cx = minX - PAD - CW - 10; cy = rcy - CH/2; }
+    else if (cardPos === 'below') { cx = rcx - CW/2; cy = maxY + PAD + 10; }
+    else if (cardPos === 'above') { cx = rcx - CW/2; cy = minY - PAD - CH - 10; }
+    else                          { cx = (VW - CW)/2; cy = (VH - CH)/2; }
+
+    cx = Math.max(8, Math.min(VW - CW - 8, cx));
+    cy = Math.max(8, Math.min(VH - CH - 8, cy));
+    card.style.left = Math.round(cx) + 'px';
+    card.style.top  = Math.round(cy) + 'px';
+  });
+}
 </script>
 </body>
 </html>
