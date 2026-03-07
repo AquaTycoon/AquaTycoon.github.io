@@ -30,7 +30,8 @@
     <meta property="og:title" content="HydroSafe Tycoon — Build Your Water Empire">
     <meta property="og:description" content="Free browser tycoon game. Build wells, pump stations, desalination plants and more. Survive historical plagues, manage cholera pandemics, and save Future Earth 2150. No download needed!">
     <meta property="og:site_name" content="HydroSafe Tycoon">
-    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="https://aquatycoon.github.io">
+    <link rel="canonical" href="https://aquatycoon.github.io">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -55,6 +56,7 @@
           "@context": "https://schema.org",
           "@type": "VideoGame",
           "name": "HydroSafe Tycoon",
+          "url": "https://aquatycoon.github.io",
           "alternateName": ["Water Tycoon", "Hydro Tycoon", "Water Empire Game", "Aqua Tycoon", "Water Idle Game", "Water Incremental", "HydroSafe", "Water Management Tycoon"],
           "description": "A free online idle tycoon game where you build and manage a water empire. Features 5 game modes including Modern Day tycoon, Plague of Athens survival, Aztec Cocoliztli crisis, Cholera Pandemics history, and Future Earth 2150 sci-fi strategy.",
           "genre": ["Tycoon", "Idle", "Incremental", "Strategy", "Simulation", "Casual", "Business", "City Builder"],
@@ -920,16 +922,16 @@
             letter-spacing: 1px
         }
 
-            .mode-tag.play {
-                background: rgba(0,255,157,.12);
-                border: 1px solid rgba(0,255,157,.4);
-                color: var(--accent2)
-            }
-
             .mode-tag.soon {
                 background: rgba(80,80,80,.2);
                 border: 1px solid rgba(120,120,120,.25);
                 color: rgba(255,255,255,.28)
+            }
+
+            .mode-tag.beginner {
+                background: rgba(255,215,0,.1);
+                border: 1px solid rgba(255,215,0,.35);
+                color: #ffd700
             }
 
         #menu-footer {
@@ -1099,7 +1101,7 @@
         <div class="mode-name">MODERN DAY</div>
         <div class="mode-desc">Bring clean water to millions. Build your empire, purify the world's supply, and save lives one pipeline at a time.</div>
       </div>
-      <div class="mode-tag play">PLAY</div>
+      <div class="mode-tag beginner">⭐ BEGINNER</div>
     </div>
     <div class="mode-btn" onclick="launchAthens()">
       <div class="mode-icon">🏛️</div>
@@ -1107,7 +1109,6 @@
         <div class="mode-name">PLAGUE OF ATHENS</div>
         <div class="mode-desc">430 BC — A devastating epidemic tears through Athens mid-war. Secure water sources and contain the outbreak before the city falls.</div>
       </div>
-      <div class="mode-tag play">PLAY</div>
     </div>
     <div class="mode-btn" onclick="launchCocoliztli()">
       <div class="mode-icon">🌿</div>
@@ -1115,7 +1116,6 @@
         <div class="mode-name">AZTEC COCOLIZTLI</div>
         <div class="mode-desc">1545 — A catastrophic epidemic sweeps the Aztec Empire. Manage scarce water sources across drought-stricken villages before millions perish.</div>
       </div>
-      <div class="mode-tag play">PLAY</div>
     </div>
     <div class="mode-btn" onclick="launchCholera()">
       <div class="mode-icon">⚗️</div>
@@ -1123,7 +1123,6 @@
         <div class="mode-name">CHOLERA PANDEMICS</div>
         <div class="mode-desc">1817–present — Seven waves, countless cities. Build sanitation systems across the globe and end the longest-running pandemic in history.</div>
       </div>
-      <div class="mode-tag play">PLAY</div>
     </div>
     <div class="mode-btn" onclick="launchFutureEarth()">
       <div class="mode-icon">🚀</div>
@@ -1131,7 +1130,6 @@
         <div class="mode-name">FUTURE EARTH</div>
         <div class="mode-desc">In a water-scarce 2150, engineer the tech to save humanity. Every drop counts.</div>
       </div>
-      <div class="mode-tag play">PLAY</div>
     </div>
   </div>
   <div id="menu-footer">SELECT AN ERA TO BEGIN</div>
@@ -1594,27 +1592,21 @@
 <script>
 // ═══════════════ WEBGL ═══════════════
 const canvas=document.getElementById('canvas-bg');
-const gl=canvas.getContext('webgl',{antialias:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl',{antialias:false});
-// Render at half resolution — CSS stretches it, huge GPU saving
-function resizeCanvas(){
-  canvas.width=Math.ceil(innerWidth/2);
-  canvas.height=Math.ceil(innerHeight/2);
-  if(gl)gl.viewport(0,0,canvas.width,canvas.height);
-}
+const gl=canvas.getContext('webgl')||canvas.getContext('experimental-webgl');
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;if(gl)gl.viewport(0,0,canvas.width,canvas.height);}
 resizeCanvas();window.addEventListener('resize',resizeCanvas);
 if(gl){
   const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
-  // 3 octaves (was 5) — still looks great, much cheaper
-  const fs=`precision mediump float;uniform float t;uniform vec2 res;
+  const fs=`precision highp float;uniform float t;uniform vec2 res;
   float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
   float sn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(n(i),n(i+vec2(1,0)),f.x),mix(n(i+vec2(0,1)),n(i+vec2(1,1)),f.x),f.y);}
-  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*sn(p);p*=2.1;a*=.5;}return v;}
+  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*sn(p);p*=2.1;a*=.5;}return v;}
   void main(){vec2 uv=gl_FragCoord.xy/res;float T=t*.18;
     vec2 q=vec2(fbm(uv),fbm(uv+vec2(5.2,1.3)));
-    vec2 r=vec2(fbm(uv+2.*q+vec2(1.7+T*.3,9.2)),fbm(uv+2.*q+vec2(8.3+T*.25,2.8)));
-    float f=clamp(fbm(uv+2.*r+vec2(T*.1))+sin(uv.x*10.+uv.y*5.+T*2.5)*.03,0.,1.);
+    vec2 r=vec2(fbm(uv+4.*q+vec2(1.7+T*.3,9.2)),fbm(uv+4.*q+vec2(8.3+T*.25,2.8)));
+    float f=clamp(fbm(uv+4.*r+vec2(T*.1))+sin(uv.x*12.+uv.y*6.+T*2.5)*.03,0.,1.);
     vec3 col=mix(vec3(.01,.04,.09),vec3(.02,.09,.18),f);col=mix(col,vec3(0.,.4,.7),f*f*.5);col+=vec3(0.,.7,.9)*max(0.,f-.7)*.4;
-    float c=sin(uv.x*30.+T*3.)*sin(uv.y*30.+T*2.5);col+=vec3(0.,.3,.5)*max(0.,c*c*.08)*f;
+    float c=sin(uv.x*40.+T*3.)*sin(uv.y*40.+T*2.5);col+=vec3(0.,.3,.5)*max(0.,c*c*.08)*f;
     col*=.7+.3*(1.-2.*length(uv-.5));gl_FragColor=vec4(col,1);}`;
   function mkS(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
   const prog=gl.createProgram();gl.attachShader(prog,mkS(gl.VERTEX_SHADER,vs));gl.attachShader(prog,mkS(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);gl.useProgram(prog);
@@ -1622,17 +1614,7 @@ if(gl){
   const pp=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(pp);gl.vertexAttribPointer(pp,2,gl.FLOAT,false,0,0);
   const ut=gl.getUniformLocation(prog,'t'),ur=gl.getUniformLocation(prog,'res');
   const t0=performance.now();let glLast=0;
-  // Cap at 20fps for shader — game logic runs separately
-  (function loop(now){
-    requestAnimationFrame(loop);
-    if(now-glLast<50)return; // 20fps cap (was 30fps / 34ms)
-    // Skip if canvas not visible (other game modes)
-    if(canvas.style.display==='none'||canvas.offsetParent===null)return;
-    glLast=now;
-    gl.uniform1f(ut,(now-t0)/1e3);
-    gl.uniform2f(ur,canvas.width,canvas.height);
-    gl.drawArrays(gl.TRIANGLES,0,6);
-  })(0);
+  (function loop(now){requestAnimationFrame(loop);if(now-glLast<34)return;glLast=now;gl.uniform1f(ut,(now-t0)/1e3);gl.uniform2f(ur,canvas.width,canvas.height);gl.drawArrays(gl.TRIANGLES,0,6);})(0);
 }
 
 // ═══════════════ CONSTANTS ═══════════════
